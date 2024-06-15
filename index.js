@@ -1,12 +1,11 @@
 const express = require('express');
 const app = express();
-const port = process.env.port||4000;
+const port = process.env.port||3000;
 const mongoose = require('mongoose');
 const User = require('./model/user.js');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const multer = require('multer');
 const path = require('path');
 
 app.use(express.json());
@@ -25,23 +24,6 @@ mongoose.connect(process.env.DATABASE)
     })
 
 const saltRounds = 10;
-
-const storage = multer.diskStorage({
-    destination: './upload/images',
-    filename:(req,file,cb)=>{
-        return cb(null,`${file.fieldname}_${Date.now()}${path.extname(file.originalname)}`)
-    }
-})
-
-const upload = multer({storage:storage})
-
-app.use('/images',express.static('upload/images'))
-app.post('/upload',upload.single('product'),(req,res)=>{
-    res.json({
-        success:1,
-        image_url:`http://localhost:${port}`
-    })
-})
 
 async function hashPassword(password){
     try{
@@ -73,10 +55,11 @@ app.post('/postData',async(req,res)=>{
             password: hashedPassword,
             cartData:cart,
         })
+        console.log(newUser);
         await newUser.save();
         const data={
             user:{
-                id:newUser.id
+                id:newUser._id
             }
         }
         const token = jwt.sign(data,process.env.SECRET_KEY)
@@ -103,7 +86,7 @@ app.post('/login',async(req,res)=>{
         if(passwordMatch){
            const data = {
             user:{
-                id:found.id
+                id:found._id
             }
            }
            const token = jwt.sign(data,process.env.SECRET_KEY);
@@ -129,6 +112,7 @@ const fetchUser = async(req,res,next) => {
         try{
             const data = jwt.verify(token,process.env.SECRET_KEY)
             req.user = data.user;
+            console.log(data);
             next();
         }catch(error){
             res.status(401).send({errors:"please authenticate using valid token"})
